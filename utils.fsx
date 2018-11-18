@@ -69,3 +69,23 @@ let getFirst (x:string)  =
 
 
 let out = Array.map (fun x -> getFirst x) r |> Array.distinct |> Array.fold (fun acc item -> acc + item) "-"
+
+let beepFile = @"S:\DadOnly\Downloads\beep.tar\beep\beep-1.0"
+
+let b = readLines beepFile
+Seq.length b
+let seqCast : seq<string> = Seq.cast b
+
+Seq.item 200 seqCast |> Seq.singleton |> Seq.map (fun x -> x.Split())
+
+
+let c = Seq.item 200 b |> Seq.singleton |> Seq.map (fun x -> x.Split()) 
+
+
+let beepSorter (x:string[]) = x.[2..]
+
+[1 .. 10] |> Seq.skip 3 |> Seq.take 5 |> Seq.toList;;
+
+b |> Seq.skip 200 |> Seq.take 100 |> Seq.map (fun x -> x.Split()) |> Seq.sortBy beepSorter
+
+Seq.take 200 d
