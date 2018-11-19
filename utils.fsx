@@ -67,28 +67,42 @@ let getFirst (x:string)  =
     let c = b.Trim('\'')
     c.Trim('-')
 
-
 let out = Array.map (fun x -> getFirst x) r |> Array.distinct |> Array.fold (fun acc item -> acc + item) "-"
 
-let beepFile = @"D:\downloads\beep.tar\beep\beep-1.0"
-// @"S:\DadOnly\Downloads\beep.tar\beep\beep-1.0"
-// @"D:\downloads\beep.tar\beep\beep-1.0"
+module beepUtils = 
+    let beepFile = @"S:\DadOnly\Downloads\beep.tar\beep\beep-1.0"
+    // @"S:\DadOnly\Downloads\beep.tar\beep\beep-1.0"
+    // @"D:\downloads\beep.tar\beep\beep-1.0"
 
-let b = System.IO.File.ReadLines(beepFile)
+    let trimmedBeep = System.IO.File.ReadLines(beepFile) 
+                        |> Seq.skipWhile 
+                            (fun (x:string) ->  let y = x.Trim()
+                                                y.StartsWith "#")
 
-let trimmed = b 
-              |> Seq.skipWhile 
-                (fun (x:string) ->  let y = x.Trim()
-                                    y.StartsWith "#")
+    type Beep = { Word: string; Phonemes:  string list}
+    let beepSorter (x:Beep) = - List.length x.Phonemes
 
-let beepSorter (x:seq<string>) = (Seq.head x).[1..] 
+    let splitItUp (x:string) = 
+      let xs = x.Split() 
+                    |> Seq.choose (fun x ->
+                        match x with
+                          | "" -> None
+                          | _ -> Some(x) )
+      {Word = (Seq.head xs); Phonemes = (Seq.tail xs |> Seq.toList)}
 
-let splitItUp (x:string) = 
-  x.Split() 
-  |> Seq.choose (fun x ->
-                    match x with
-                      | "" -> None
-                      | _ -> Some(x) )
-  |> Seq.toList                    
+    let take x = Seq.take x trimmedBeep |> Seq.map splitItUp |> Seq.sortBy beepSorter
+    
+    let phonecode =  System.IO.File.ReadLines(@"S:\DadOnly\Downloads\beep.tar\beep\phoncode.doc") 
 
-Seq.take 20 trimmed |> Seq.map splitItUp |> Seq.sortBy beepSorter
+    let arpabet = Seq.tail phonecode 
+                    |> Seq.map (fun (x:string) -> x.Split('\t') |> Array.head) 
+                    |> Seq.toList 
+                    |> List.filter (fun x -> x.Length < 3 && x.Length > 0 )
+
+    let vowels, consonanats = List.partition 
+                                (fun (x:string) -> match x.[0] with  
+                                                     | 'a' | 'e' | 'i' | 'o' | 'u' -> true 
+                                                     | _ -> false) arpabet
+
+
+let a = beepUtils.take 20
