@@ -1,4 +1,6 @@
 open System
+open System.Collections.Generic
+open System.Security.Cryptography
 let s = """
                     "P-", "M-", "N-", "-N", "-M", "-P",
                     "C-", "T-", "F-", "L-", "-L", "-F", "-T", "-H",
@@ -70,9 +72,12 @@ let getFirst (x:string)  =
 let out = Array.map (fun x -> getFirst x) r |> Array.distinct |> Array.fold (fun acc item -> acc + item) "-"
 
 module beepUtils = 
-    let beepFile = @"S:\DadOnly\Downloads\beep.tar\beep\beep-1.0"
-    // @"S:\DadOnly\Downloads\beep.tar\beep\beep-1.0"
-    // @"D:\downloads\beep.tar\beep\beep-1.0"
+
+    let laptopDir = @"D:\downloads\beep.tar\beep\"
+    let desktopDir =  @"S:\DadOnly\Downloads\beep.tar\beep\"
+
+    let beepDirectory = laptopDir
+    let beepFile = beepDirectory + @"beep-1.0"
 
     let trimmedBeep = System.IO.File.ReadLines(beepFile) 
                         |> Seq.skipWhile 
@@ -92,7 +97,7 @@ module beepUtils =
 
     let take x = Seq.take x trimmedBeep |> Seq.map splitItUp |> Seq.sortBy beepSorter
     
-    let phonecode =  System.IO.File.ReadLines(@"S:\DadOnly\Downloads\beep.tar\beep\phoncode.doc") 
+    let phonecode =  System.IO.File.ReadLines(beepDirectory + @"phoncode.doc") 
 
     let arpabet = Seq.tail phonecode 
                     |> Seq.map (fun (x:string) -> x.Split('\t') |> Array.head) 
@@ -105,4 +110,46 @@ module beepUtils =
                                                      | _ -> false) arpabet
 
 
-let a = beepUtils.take 20
+let a = beepUtils.take 100
+
+module ConsonantProximity = 
+// https://stackoverflow.com/questions/53381162/promixity-in-collection Q & A
+    open beepUtils
+    let isVowelOrWordBoundary = ResizeArray['a';'e';'i';'o';'u';' '].Contains
+    
+    let plusSpace = (List.append beepUtils.vowels [" "])
+    let isBoundary = (ResizeArray  plusSpace).Contains
+
+    let rec splitWord splitter lst = 
+        let i = List.tryFindIndex splitter lst
+        match i with 
+            | Some idx ->   
+                    let a, b = List.splitAt idx lst
+                    match List.tail b with
+                    | [] -> [a]
+                    | more -> a :: (splitWord splitter more)
+            | None -> 
+                    [lst]
+
+    // let consonantClusters = splitWord isVowelOrWordBoundary (Seq.toList "stuff and more stuff") 
+    let a = beepUtils.take 1000
+
+    let q = a |> Seq.map (fun x -> List.toSeq x.Phonemes) |> Seq.collect (fun x -> Seq.append x [" "] )
+
+
+    let consonantClusters = splitWord isBoundary (Seq.toList q)
+    let consonantPositions = Seq.collect (fun x ->  
+        x |> Seq.mapi(fun i c-> (c,i + 1)::(c, -List.length x + i )::[])) 
+
+    consonantPositions consonantClusters |> Seq.collect (fun x -> x)
+    |> Seq.groupBy fst
+    |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
+    |> Seq.iter (printfn "%A")
+
+    // ('s', seq [(1, 2); (-2, 2)])
+    // ('t', seq [(2, 2); (-1, 2)])
+    // ('f', seq [(1, 2); (-2, 2); (2, 2); (-1, 2)])
+    // ('n', seq [(1, 1); (-2, 1)])
+    // ('d', seq [(2, 1); (-1, 1)])
+    // ('m', seq [(1, 1); (-1, 1)])
+    // ('r', seq [(1, 1); (-1, 1)])
