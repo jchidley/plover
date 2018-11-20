@@ -115,35 +115,34 @@ let a = beepUtils.take 100
 module ConsonantProximity = 
 // https://stackoverflow.com/questions/53381162/promixity-in-collection Q & A
     open beepUtils
-    let isVowelOrWordBoundary = ResizeArray['a';'e';'i';'o';'u';' '].Contains
+    let isVowel = ResizeArray['a';'e';'i';'o';'u'].Contains
     
-    let plusSpace = (List.append beepUtils.vowels [" "])
-    let isBoundary = (ResizeArray  plusSpace).Contains
+    let isBoundary = (ResizeArray beepUtils.vowels).Contains
 
-    let rec splitWord splitter lst = 
+    // Not tested
+    // let consonantClusters = splitWord isVowel (Seq.toList ["stuff";"and";"more";"stuff"]) 
+
+    let rec chopIt splitter lst = 
         let i = List.tryFindIndex splitter lst
         match i with 
-            | Some idx ->   
-                    let a, b = List.splitAt idx lst
-                    match List.tail b with
-                    | [] -> [a]
-                    | more -> a :: (splitWord splitter more)
-            | None -> 
-                    [lst]
+        | Some idx ->   
+                let a, b = List.splitAt idx lst
+                match List.tail b with
+                | [] -> [a]
+                | more -> a :: chopIt splitter more
+        | None -> 
+                [lst]
 
-    // let consonantClusters = splitWord isVowelOrWordBoundary (Seq.toList "stuff and more stuff") 
-    let a = beepUtils.take 1000
+    let consonantClusters =
+        seq {for i in beepUtils.take 200000 do yield! (chopIt isBoundary i.Phonemes ) } |> Seq.toList
 
-    let q = a |> Seq.map (fun x -> List.toSeq x.Phonemes) |> Seq.collect (fun x -> Seq.append x [" "] )
-
-
-    let consonantClusters = splitWord isBoundary (Seq.toList q)
     let consonantPositions = Seq.collect (fun x ->  
         x |> Seq.mapi(fun i c-> (c,i + 1)::(c, -List.length x + i )::[])) 
 
     consonantPositions consonantClusters |> Seq.collect (fun x -> x)
     |> Seq.groupBy fst
     |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
+    // |> Seq.length 
     |> Seq.iter (printfn "%A")
 
     // ('s', seq [(1, 2); (-2, 2)])
