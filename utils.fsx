@@ -110,17 +110,9 @@ module beepUtils =
                                                      | _ -> false) arpabet
 
 
-let a = beepUtils.take 100
-
 module ConsonantProximity = 
 // https://stackoverflow.com/questions/53381162/promixity-in-collection Q & A
     open beepUtils
-    let isVowel = ResizeArray['a';'e';'i';'o';'u'].Contains
-    
-    let isBoundary = (ResizeArray beepUtils.vowels).Contains
-
-    // Not tested
-    // let consonantClusters = splitWord isVowel (Seq.toList ["stuff";"and";"more";"stuff"]) 
 
     let rec chopIt splitter lst = 
         let i = List.tryFindIndex splitter lst
@@ -133,8 +125,18 @@ module ConsonantProximity =
         | None -> 
                 [lst]
 
+    // let isVowel = ResizeArray['a';'e';'i';'o';'u'].Contains
+    
+    // char list list, not working
+    // let consonantClusters = chopIt isVowel (["stuff";"and";"more";"stuff"] |> (fun x -> x Seq.toList  ) 
+
+    let isBoundary = (ResizeArray beepUtils.vowels).Contains
+
     let consonantClusters =
-        seq {for i in beepUtils.take 200000 do yield! (chopIt isBoundary i.Phonemes ) } |> Seq.toList
+        seq {for i in beepUtils.take 100000 do yield! (chopIt isBoundary i.Phonemes ) } 
+        |> Seq.filter (fun x -> x <> [])
+        |> Seq.toList
+        // |> Seq.length
 
     let consonantPositions = Seq.collect (fun x ->  
         x |> Seq.mapi(fun i c-> (c,i + 1)::(c, -List.length x + i )::[])) 
@@ -142,6 +144,7 @@ module ConsonantProximity =
     consonantPositions consonantClusters |> Seq.collect (fun x -> x)
     |> Seq.groupBy fst
     |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
+    |> Seq.map (fun (x, xs) -> x, Seq.sortByDescending snd xs)
     // |> Seq.length 
     |> Seq.iter (printfn "%A")
 
