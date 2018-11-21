@@ -72,20 +72,18 @@ let getFirst (x:string)  =
 let out = Array.map (fun x -> getFirst x) r |> Array.distinct |> Array.fold (fun acc item -> acc + item) "-"
 
 module beepUtils = 
-
     let laptopDir = @"D:\downloads\beep.tar\beep\"
     let desktopDir =  @"S:\DadOnly\Downloads\beep.tar\beep\"
-
     let beepDirectory = laptopDir
     let beepFile = beepDirectory + @"beep-1.0"
 
-    let trimmedBeep = System.IO.File.ReadLines(beepFile) 
+    // Get rid of comment lines
+    let beep = System.IO.File.ReadLines(beepFile) 
                         |> Seq.skipWhile 
                             (fun (x:string) ->  let y = x.Trim()
                                                 y.StartsWith "#")
 
     type Beep = { Word: string; Phonemes:  string list}
-    let beepSorter (x:Beep) = - List.length x.Phonemes
 
     let splitItUp (x:string) = 
       let xs = x.Split() 
@@ -94,9 +92,8 @@ module beepUtils =
                           | "" -> None
                           | _ -> Some(x) )
       {Word = (Seq.head xs); Phonemes = (Seq.tail xs |> Seq.toList)}
+    let data =  beep |> Seq.map splitItUp
 
-    let take x = Seq.take x trimmedBeep |> Seq.map splitItUp |> Seq.sortBy beepSorter
-    
     let phonecode =  System.IO.File.ReadLines(beepDirectory + @"phoncode.doc") 
 
     let arpabet = Seq.tail phonecode 
@@ -125,33 +122,24 @@ module ConsonantProximity =
         | None -> 
                 [lst]
 
-    // let isVowel = ResizeArray['a';'e';'i';'o';'u'].Contains
-    
-    // char list list, not working
-    // let consonantClusters = chopIt isVowel (["stuff";"and";"more";"stuff"] |> (fun x -> x Seq.toList  ) 
-
     let isBoundary = (ResizeArray beepUtils.vowels).Contains
 
     let consonantClusters =
-        seq {for i in beepUtils.take 100000 do yield! (chopIt isBoundary i.Phonemes ) } 
+        seq {for i in beepUtils.data do yield! (chopIt isBoundary i.Phonemes ) } 
         |> Seq.filter (fun x -> x <> [])
         |> Seq.toList
-        // |> Seq.length
 
     let consonantPositions = Seq.collect (fun x ->  
         x |> Seq.mapi(fun i c-> (c,i + 1)::(c, -List.length x + i )::[])) 
 
-    consonantPositions consonantClusters |> Seq.collect (fun x -> x)
-    |> Seq.groupBy fst
-    |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
-    |> Seq.map (fun (x, xs) -> x, Seq.sortByDescending snd xs)
-    // |> Seq.length 
-    |> Seq.iter (printfn "%A")
+    let results = consonantPositions consonantClusters 
+                    |> Seq.collect (fun x -> x)
+                    |> Seq.groupBy fst
+                    |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
+    
+    let sorted = results 
+                    |> Seq.sortBy (fun (i,_) -> i)
+                    |> Seq.map (fun (x, xs) -> x, Seq.sortByDescending snd xs)
+                    |> Seq.sortByDescending  (fun (_,xs) -> Seq.head xs |> (fun (_,b) -> b) )
 
-    // ('s', seq [(1, 2); (-2, 2)])
-    // ('t', seq [(2, 2); (-1, 2)])
-    // ('f', seq [(1, 2); (-2, 2); (2, 2); (-1, 2)])
-    // ('n', seq [(1, 1); (-2, 1)])
-    // ('d', seq [(2, 1); (-1, 1)])
-    // ('m', seq [(1, 1); (-1, 1)])
-    // ('r', seq [(1, 1); (-1, 1)])
+    let print () = sorted |> Seq.iter (printfn "%A")
