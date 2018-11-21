@@ -137,20 +137,18 @@ module ConsonantProximity =
                     |> Seq.groupBy fst
                     |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
 
-    let consonantClusterResults = results consonantClusters
+    let consonantR = results consonantClusters
 
-    let wordResults = results (seq {for i in beepUtils.data do yield i.Phonemes } |> Seq.toList) 
+    let wordR = results (seq {for i in beepUtils.data do yield i.Phonemes } |> Seq.toList) 
                         |> Seq.filter (fun (i,_) -> not (isVowel i))
 
-    let sorted x = x
+    let sortIt x = x
                     |> Seq.sortBy (fun (i,_) -> i)
                     |> Seq.map (fun (x, xs) -> x, Seq.sortByDescending snd xs)
                     |> Seq.sortByDescending  (fun (_,xs) -> Seq.head xs |> (fun (_,b) -> b) )
 
-    let print (x) = sorted x |> Seq.iter (printfn "%A")
+    let print x = sortIt x |> Seq.iter (printfn "%A")
 
-module answer2 =
-    open ConsonantProximity
     let genTail2 xss =
         let rec aux accl accr = function
         | [] -> List.rev accr
@@ -167,25 +165,17 @@ module answer2 =
     | None, None -> []
     | Some x, None | None, Some x -> [x]
     | Some x, Some y -> [y; x]
-(* 
-    let isVowel = ResizeArray['a';'e';'i';'o';'u'].Contains
 
-    "consonants"
-    |> fun s -> s.ToLower()
-    |> Seq.toList
-    |> genTail2
-    |> List.filter (fst >> isVowel >> not)
-    |> List.collect (dist2 isVowel >> tuple2List)
-    |> Seq.groupBy fst
-    |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
-    |> Seq.iter (printfn "%A")
- *)
+    let vowelR = 
+        (seq {for i in beepUtils.data do yield i.Phonemes } |> Seq.toList)    
+        |> Seq.map (fun x -> genTail2 x)
+        |> Seq.map (fun x -> Seq.filter (fst >> isVowel >> not) x )
+        |> Seq.map (fun x -> Seq.collect (dist2 isVowel >> tuple2List) x)
+        |> Seq.collect (fun x -> x)
+        |> Seq.groupBy fst
+        |> Seq.map (fun (x, xs) -> x, Seq.countBy snd xs)
+
+    // print wordR
+    // print consonantR
+    // print vowelR
     
-    let testing =
-                    (seq {for i in (Seq.take 10 beepUtils.data) do yield i.Phonemes } |> Seq.toList)     
-                    |> genTail2
-                    |> Seq.filter (fun (i,_) -> not (isVowel (List.head i)))
-                    |> Seq.collect (dist2 ConsonantProximity.isVowel >> tuple2List)
-
-                    
-
